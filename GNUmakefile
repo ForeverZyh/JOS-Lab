@@ -307,7 +307,6 @@ warn:
 	echo "this is the 2016 6.828 lab"; \
 	echo "******* WARNING ********* [39m"; \
 	echo; \
-	false;
 
 #handin-prep:
 #	@./handin-prep
