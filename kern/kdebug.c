@@ -183,7 +183,7 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	rfun = rline;
 	stab_binsearch(stabs, &lfun, &rfun, N_SLINE, addr);
 	if (lfun <= rfun) {
-		info->eip_line = stabs[lfun].n_value;
+		info->eip_line = stabs[lfun].n_desc;
 	} else {
 		info->eip_line = -1;
 	}
