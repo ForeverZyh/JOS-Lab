@@ -1,0 +1,19 @@
+2. 
+1023	0x00000000	Page table for top 4MB of phys memory
+1022	0xffc00000	
+.
+.
+.
+0002	0x00800000
+0001	0x00400000
+0000	0x00000000
+3.
+PTE_U is not set
+4.
+4MB/8B*4MB = 2GB
+5.
+4MB for PageInfo array, 4KB for page directory, 4MB/8B/1K*4KB = 2GB for page table
+6.
+jmp *%eax
+beacese already map pa [0, 4M) to va [0, 4M), so that can work after enable page.
+because we will abandon va [0,4M) later
