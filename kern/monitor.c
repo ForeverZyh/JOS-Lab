@@ -10,6 +10,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
+#include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
 
@@ -25,6 +26,11 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "backtrace", "Display backtrace", mon_backtrace },
+	{ "showmappings", "Display the physical page mappings and corresponding permission bits", mon_showmappings},
+	{ "setperms", "Set the perm of the page of that virutal address", mon_setperms},
+	{ "dump", "Dump the pages of that virutal/physical address", mon_dump},
+	{ "lookmem", "Look up some bits/bytes in that virutal/physical address", mon_lookmem},
+	
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -85,7 +91,242 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+static void
+showmapping(uint32_t pa)
+{
+	pte_t* pg_table = pgdir_walk(kern_pgdir, (void *)pa, 0);
+	if (pg_table == NULL || !(*pg_table & PTE_P)) 
+		cprintf("The page doesn't exist!\n");
+	else
+	{
+		cprintf("0x%08x - 0x%08x: ", PTE_ADDR(*pg_table), PTE_ADDR(*pg_table) + PGSIZE - 1);
+		bool user = *pg_table & PTE_U, write = *pg_table & PTE_W;
+		if (user) cprintf("user: ");
+		else cprintf("kernel: ");
+		if (write) cprintf("read/write.\n");
+		else cprintf("read only.\n");
+	}
+}
+int
+mon_showmappings(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc == 2)
+	{
+		uint32_t pa = strtol(argv[1], NULL, 0);
+		showmapping(pa);
+	}
+	else if (argc == 3)
+	{
+		uint32_t st = strtol(argv[1], NULL, 0);
+		uint32_t en = strtol(argv[2], NULL, 0);
+		if (st <= en)
+		{
+			if (st & 0xfff) 
+			{
+				showmapping(st);
+				st = (st & ~0xfff) + PGSIZE;
+			}
+			for(;st <= en;st += PGSIZE)
+				showmapping(st);
+		}
+	}
+	else 
+	{
+		cprintf("usage[1]: showmappings 0x1234\n");
+		cprintf("usage[2]: showmappings 0x1234 0xabcd\n");
+	}
+	return 0;
+}
 
+static int getperm(char *s)
+{
+	int perm = -1;
+	if (strlen(s) == 1 && s[0] == '0') perm = 0;
+	else if (strlen(s) == 1 && s[0] == 'U') perm = PTE_U;
+	else if (strlen(s) == 1 && s[0] == 'W') perm = PTE_W;
+	else if (strlen(s) == 2 && s[0] == 'U' && s[1] == 'W')
+		perm = PTE_U | PTE_W;
+	return perm;
+}
+
+static void setperm(uint32_t pa, int perm)
+{
+	pte_t* pg_table = pgdir_walk(kern_pgdir, (void *)pa, 0);
+	if (pg_table == NULL || !(*pg_table & PTE_P)) 
+		cprintf("The page doesn't exist!\n");
+	else
+	{
+		cprintf("Before: ");
+		showmapping(pa);
+		*pg_table &= ~PTE_U;
+		*pg_table &= ~PTE_W;
+		*pg_table |= perm;
+		cprintf("After:  ");
+		showmapping(pa);
+	}
+}
+
+int
+mon_setperms(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc == 3)
+	{
+		uint32_t pa = strtol(argv[1], NULL, 0);
+		int perm = getperm(argv[2]);
+		if (perm == -1) cprintf("unknown perm!\n");
+		else setperm(pa, perm);
+	}
+	else if (argc == 4)
+	{
+		uint32_t st = strtol(argv[1], NULL, 0);
+		uint32_t en = strtol(argv[2], NULL, 0);
+		int perm = getperm(argv[3]);
+		if (perm == -1) cprintf("unknown perm!\n");
+		else 
+		{
+			if (st <= en)
+			{
+				if (st & 0xfff) 
+				{
+					setperm(st, perm);
+					st = (st & ~0xfff) + PGSIZE;
+				}
+				for(;st <= en;st += PGSIZE)
+					setperm(st, perm);
+			}
+		}
+	}
+	else 
+	{
+		cprintf("usage[1]: setperms address [0 | U | W | UW]\n");
+		cprintf("usage[2]: setperms start_address end_address [0 | U | W | UW]\n");
+	}
+	return 0;
+}
+
+static void dump(uint32_t pa, int address_type)
+{
+	if (address_type) pa = (uint32_t) KADDR(pa);
+	pte_t* pg_table = pgdir_walk(kern_pgdir, (void *)pa, 0);
+	if (pg_table == NULL || !(*pg_table & PTE_P)) 
+		cprintf("The page doesn't exist!\n");
+	else
+	{
+		*pg_table &= ~PTE_P;
+		cprintf("Dump:   0x%08x - 0x%08x\n", PTE_ADDR(*pg_table), PTE_ADDR(*pg_table) + PGSIZE - 1);
+	}
+} 
+
+int
+mon_dump(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc == 3)
+	{
+		uint32_t pa = strtol(argv[2], NULL, 0);
+		if (strlen(argv[1]) == 1 && argv[1][0] == 'v') dump(pa, 0);
+		else if (strlen(argv[1]) == 1 && argv[1][0] == 'p') dump(pa, 1);
+		else cprintf("unknown address type!\n");
+	}
+	else if (argc == 4)
+	{
+		uint32_t st = strtol(argv[2], NULL, 0);
+		uint32_t en = strtol(argv[3], NULL, 0);
+		int address_type = -1;
+		if (strlen(argv[1]) == 1 && argv[1][0] == 'v') address_type = 0;
+		else if (strlen(argv[1]) == 1 && argv[1][0] == 'p') address_type = 1;
+		else cprintf("unknown address type!\n");
+		if (address_type != -1)
+		{
+			if (st <= en)
+			{
+				if (st & 0xfff) 
+				{
+					dump(st, address_type);
+					st = (st & ~0xfff) + PGSIZE;
+				}
+				for(;st <= en;st += PGSIZE)
+					dump(st, address_type);
+			}
+		}
+	}
+	else 
+	{
+		cprintf("usage[1]: dump [v | p] 0x1234\n");
+		cprintf("usage[2]: dump [v | p] 0x1234 0xabcd\n");
+	}
+	return 0;
+}
+
+static int getOutType(char *s)
+{
+	if (strlen(s) == 1)
+	{
+		if (s[0] == 'b') return 0;
+		if (s[0] == 'B') return 1;
+		if (s[0] == 'c') return 2;
+		if (s[0] == 'd') return 3;
+		if (s[0] == 'x') return 4;
+	}
+	return -1;
+}
+
+static void lookmem(uint32_t pa, int address_type, int o1, int o2)
+{
+	uint32_t tmp = pa;
+	if (address_type) pa = (uint32_t) KADDR(pa);
+	if (address_type) cprintf("At physical memory 0x%08x: ", tmp);
+	else cprintf("At virtual memory 0x%08x: ", tmp); 
+	uint32_t ans;
+	if (o1 == 0) ans = *((unsigned char*) pa);
+	else ans = *((uint32_t*) pa);
+	if (o2 == 2) cprintf("%c\n", (char)ans);
+	if (o2 == 3) cprintf("%d\n", ans);
+	if (o2 == 4 && o1 == 0) cprintf("0x%02x\n", ans);
+	if (o2 == 4 && o1 == 1) cprintf("0x%08x\n", ans);
+} 
+
+int
+mon_lookmem(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc == 5)
+	{
+		uint32_t pa = strtol(argv[2], NULL, 0);
+		int o1 = getOutType(argv[3]), o2 = getOutType(argv[4]);
+		if (o1 >= 0 && o1 <= 1 && o2 >= 2 && o2 <= 4)
+		{
+			if (strlen(argv[1]) == 1 && argv[1][0] == 'v') lookmem(pa, 0, o1, o2);
+			else if (strlen(argv[1]) == 1 && argv[1][0] == 'p') lookmem(pa, 1, o1, o2);
+			else cprintf("unknown address type!\n");
+		}
+		else cprintf("unknown output type!\n");
+	}
+	else if (argc == 6)
+	{
+		uint32_t st = strtol(argv[2], NULL, 0);
+		uint32_t cnt = strtol(argv[3], NULL, 0);
+		int address_type = -1;
+		int o1 = getOutType(argv[4]), o2 = getOutType(argv[5]);
+		if (strlen(argv[1]) == 1 && argv[1][0] == 'v') address_type = 0;
+		else if (strlen(argv[1]) == 1 && argv[1][0] == 'p') address_type = 1;
+		else cprintf("unknown address type!\n");
+		if (o1 >= 0 && o1 <= 1 && o2 >= 2 && o2 <= 4)
+		{
+			if (address_type != -1)
+			{
+				for(int i = 0;i < cnt;i++)
+					if (o1 == 0) lookmem(st + i, address_type, o1, o2);
+					else lookmem(st + i * 4, address_type, o1, o2);
+			}
+		}
+		else cprintf("unknown output type!\n");
+	}
+	else 
+	{
+		cprintf("usage[1]:lookmem [v | p] 0x1234 [b | B] [c | d | x]\n");
+		cprintf("usage[2]:lookmem [v | p] 0x1234 cnt [b | B] [c | d | x]\n");
+	}
+	return 0;
+}
 
 /***** Kernel monitor command interpreter *****/
 
