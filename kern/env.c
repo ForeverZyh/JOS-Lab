@@ -280,7 +280,7 @@ region_alloc(struct Env *e, void *va, size_t len)
 	{
 		struct PageInfo *pg = page_alloc(0);
 		if (!pg) panic("page_alloc fail!");
-		page_insert(e->env_pgdir, pg, va, PTE_U | PTE_W | PTE_P);
+		page_insert(e->env_pgdir, pg, va + i, PTE_U | PTE_W | PTE_P);
 	}
 	// Hint: It is easier to use region_alloc if the caller can pass
 	//   'va' and 'len' values that are not page-aligned.
@@ -350,6 +350,7 @@ load_icode(struct Env *e, uint8_t *binary)
 		panic("bad");
 	ph = (struct Proghdr *) (binary + ELFHDR->e_phoff);
 	eph = ph + ELFHDR->e_phnum;
+	lcr3(PADDR(e->env_pgdir));
 	for (; ph < eph; ph++)
 		if (ph->p_type == ELF_PROG_LOAD)
 		{
@@ -363,6 +364,7 @@ load_icode(struct Env *e, uint8_t *binary)
 	
 	// LAB 3: Your code here.
 	region_alloc(e, (void*)USTACKTOP - PGSIZE, PGSIZE);
+	lcr3(PADDR(kern_pgdir));
 }
 
 //
@@ -378,13 +380,11 @@ env_create(uint8_t *binary, enum EnvType type)
 	// LAB 3: Your code here.
 	struct Env *e;
 	int error_code = env_alloc(&e, 0);
-	if (error_code == -E_NO_FREE_ENV) panic("no free envs!");
-	if (error_code == -E_NO_MEM) panic("no free pages!");
 	if (error_code == 0)
 	{
 		load_icode(e, binary);
 	}
-	else panic("unknown error!");
+	else panic("env_alloc: %e", error_code);
 }
 
 //
@@ -501,18 +501,15 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-	if (e->env_status == ENV_RUNNING)
+	if (curenv && curenv->env_status == ENV_RUNNING)
 	{
-		if (curenv && curenv->env_status == ENV_RUNNING)
-		{
-			curenv->env_status = ENV_RUNNABLE;
-		}
-		curenv = e;
-		curenv->env_status = ENV_RUNNING;
-		curenv->env_runs++;
-		lcr3(PADDR(curenv->env_pgdir));
-		env_pop_tf(&curenv->env_tf);
+		curenv->env_status = ENV_RUNNABLE;
 	}
+	curenv = e;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&curenv->env_tf);
 	panic("env_run not yet implemented");
 }
 
