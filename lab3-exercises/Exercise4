@@ -1,0 +1,9 @@
+1. In the marcos TRAPHANDLER and TRAPHANDLER_NOEC, a function depends on 'name'
+is defined. And if two of the function's names are the same, these two functions
+have to link to the same address. So the consequences of calling these two
+functions are the same as well. That's why we can't pass identical interrupt/
+exception id to handler, and the kernel doesn't know which interrupt or
+exception is.
+
+2. Because the privilege level of Page Fault is 0, and user can't directly call
+the 'int $0xe'.
