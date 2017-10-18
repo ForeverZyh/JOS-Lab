@@ -274,12 +274,12 @@ tarball-pref: handin-check
 	else \
 		rm -f .suf; \
 	fi; \
-	git archive --format=tar HEAD > lab$$SUF-handin.tar; \
-	git diff $(UPSTREAM)/lab$(LAB) > /tmp/lab$$SUF-diff.patch; \
-	tar -rf lab$$SUF-handin.tar /tmp/lab$$SUF-diff.patch; \
-	gzip -c lab$$SUF-handin.tar > lab$$SUF-handin.tar.gz; \
-	rm lab$$SUF-handin.tar; \
-	rm /tmp/lab$$SUF-diff.patch; \
+	git archive --format=tar HEAD > lab$(LAB)-handin.tar
+	git diff $(UPSTREAM)/lab$(LAB) > /tmp/lab$(LAB)diff.patch
+	tar -rf lab$(LAB)-handin.tar /tmp/lab$(LAB)diff.patch
+	gzip -c lab$(LAB)-handin.tar > lab$(LAB)-handin.tar.gz
+	rm lab$(LAB)-handin.tar
+	rm /tmp/lab$(LAB)diff.patch
 
 myapi.key:
 	@echo Get an API key for yourself by visiting $(WEBSUB)/
@@ -305,7 +305,6 @@ warn:
 	echo "this is the 2016 6.828 lab"; \
 	echo "******* WARNING ********* [39m"; \
 	echo; \
-	false;
 
 #handin-prep:
 #	@./handin-prep

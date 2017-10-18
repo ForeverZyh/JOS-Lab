@@ -1,0 +1,4 @@
+3. Because if user don't have the privilege, General Protection Fault will be
+generated, otherwise the break point exception will be generated.
+
+4. The privilege offers a protection for OS.

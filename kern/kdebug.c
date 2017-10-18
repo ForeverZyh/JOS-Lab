@@ -142,7 +142,8 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 		// Make sure this memory is valid.
 		// Return -1 if it is not.  Hint: Call user_mem_check.
 		// LAB 3: Your code here.
-
+		if (user_mem_check(curenv, usd, sizeof(struct UserStabData), PTE_U | PTE_P) < 0)
+			return -1;
 		stabs = usd->stabs;
 		stab_end = usd->stab_end;
 		stabstr = usd->stabstr;
@@ -150,6 +151,11 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 
 		// Make sure the STABS and string table memory is valid.
 		// LAB 3: Your code here.
+		if (user_mem_check(curenv, stabs, sizeof(struct Stab), PTE_U | PTE_P) < 0)
+			return -1;
+		if (user_mem_check(curenv, stab_end, sizeof(struct Stab), PTE_U | PTE_P) < 0)
+			return -1;
+		
 	}
 
 	// String table validity checks
@@ -204,7 +210,14 @@ debuginfo_eip(uintptr_t addr, struct Eipdebuginfo *info)
 	//	Look at the STABS documentation and <inc/stab.h> to find
 	//	which one.
 	// Your code here.
-
+	lfun = lline;
+	rfun = rline;
+	stab_binsearch(stabs, &lfun, &rfun, N_SLINE, addr);
+	if (lfun <= rfun) {
+		info->eip_line = stabs[lfun].n_desc;
+	} else {
+		info->eip_line = -1;
+	}
 
 	// Search backwards from the line number for the relevant filename
 	// stab.
