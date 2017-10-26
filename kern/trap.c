@@ -94,8 +94,8 @@ trap_init(void)
 	const int idt_id_cnt = 16;
 	const int idt_id[16] = {0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 48};
 	extern void (*funs[])();
-	cprintf("funs: %x\n",funs);
-	cprintf("funs[0]: %x\n",funs[0]);
+	/*cprintf("funs: %x\n",funs);
+	cprintf("funs[0]: %x\n",funs[0]);*/
 	for(int i = 0;i < idt_id_cnt;i++)
 	{
 		int id = idt_id[i];
@@ -214,6 +214,11 @@ trap_dispatch(struct Trapframe *tf)
 			tf->tf_regs.reg_esi);
 		return;
 	}
+	if (tf->tf_trapno == T_DEBUG)
+	{
+		monitor(tf);
+		return;
+	}
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
 	if (tf->tf_cs == GD_KT)
@@ -222,6 +227,20 @@ trap_dispatch(struct Trapframe *tf)
 		env_destroy(curenv);
 		return;
 	}
+}
+
+static bool enable_single_step()
+{
+	uint32_t dr6 = read_dr6();
+	cprintf("dr6: %x\n", dr6);
+	const uint32_t BS = 0x4000;
+	if (BS & dr6)
+	{
+		dr6 &= ~BS;
+		write_dr6(dr6);
+		return 1;
+	}
+	return 0; 
 }
 
 void
@@ -256,6 +275,9 @@ trap(struct Trapframe *tf)
 
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
+	
+	if (enable_single_step())
+		return ;
 
 	// Return to the current environment, which should be running.
 	assert(curenv && curenv->env_status == ENV_RUNNING);

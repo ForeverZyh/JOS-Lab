@@ -261,4 +261,18 @@ xchg(volatile uint32_t *addr, uint32_t newval)
 	return result;
 }
 
+static inline uint32_t
+read_dr6()
+{
+	uint32_t ans;
+	asm volatile("movl %%dr6, %0": "=r"(ans));
+	return ans;
+}
+
+static inline void
+write_dr6(uint32_t dr6)
+{
+	asm volatile("movl %0, %%dr6": : "r"(dr6));
+}
+
 #endif /* !JOS_INC_X86_H */
