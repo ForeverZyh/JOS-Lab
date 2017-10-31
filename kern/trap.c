@@ -65,6 +65,12 @@ static const char *trapname(int trapno)
 	return "(unknown trap)";
 }
 
+static bool find(const int* a, int n, int x)
+{
+	for(int i = 0;i < n;i++)
+		if (a[i] == x) return true;
+	return false;
+}
 
 void
 trap_init(void)
@@ -72,7 +78,7 @@ trap_init(void)
 	extern struct Segdesc gdt[];
 
 	// LAB 3: Your code here.
-	void handler0();
+	/*void handler0();
 	void handler1();
 	void handler3();
 	void handler4();
@@ -87,8 +93,24 @@ trap_init(void)
 	void handler13();
 	void handler14();
 	void handler16();
-	void handler48();
-	SETGATE(idt[0], 0, GD_KT, handler0, 0);
+	void handler48();*/
+	const int is_trap_cnt = 3;
+	const int is_trap[3] = {3, 4, 48};
+	const int user_perm_cnt = 2;
+	const int user_perm[2] = {3, 48};
+	const int idt_id_cnt = 16;
+	const int idt_id[16] = {0, 1, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 48};
+	extern void (*funs[])();
+	/*cprintf("funs: %x\n",funs);
+	cprintf("funs[0]: %x\n",funs[0]);*/
+	for(int i = 0;i < idt_id_cnt;i++)
+	{
+		int id = idt_id[i];
+		int arg_is_trap = find(is_trap, is_trap_cnt, id);
+		int arg_user_perm = find(user_perm, user_perm_cnt, id) * 3;
+		SETGATE(idt[id], arg_is_trap, GD_KT, funs[i], arg_user_perm);
+	}
+	/*SETGATE(idt[0], 0, GD_KT, handler0, 0);
 	SETGATE(idt[1], 0, GD_KT, handler1, 0);
 	SETGATE(idt[3], 1, GD_KT, handler3, 3);
 	SETGATE(idt[4], 1, GD_KT, handler4, 0);
@@ -103,7 +125,7 @@ trap_init(void)
 	SETGATE(idt[13], 0, GD_KT, handler13, 0);
 	SETGATE(idt[14], 0, GD_KT, handler14, 0);
 	SETGATE(idt[16], 0, GD_KT, handler16, 0);
-	SETGATE(idt[48], 1, GD_KT, handler48, 3);
+	SETGATE(idt[48], 1, GD_KT, handler48, 3);*/
 	// Per-CPU setup 
 	trap_init_percpu();
 }
@@ -237,6 +259,11 @@ trap_dispatch(struct Trapframe *tf)
 			tf->tf_regs.reg_esi);
 		return;
 	}
+	if (tf->tf_trapno == T_DEBUG)
+	{
+		monitor(tf);
+		return;
+	}
 
 	// Unexpected trap: The user process or the kernel has a bug.
 	print_trapframe(tf);
@@ -246,6 +273,20 @@ trap_dispatch(struct Trapframe *tf)
 		env_destroy(curenv);
 		return;
 	}
+}
+
+static bool enable_single_step()
+{
+	uint32_t dr6 = read_dr6();
+	//cprintf("dr6: %x\n", dr6);
+	const uint32_t BS = 0x4000;
+	if (BS & dr6)
+	{
+		dr6 &= ~BS;
+		write_dr6(dr6);
+		return 1;
+	}
+	return 0; 
 }
 
 void
@@ -297,6 +338,12 @@ trap(struct Trapframe *tf)
 
 	// Dispatch based on what type of trap occurred
 	trap_dispatch(tf);
+	
+	if (enable_single_step())
+	{
+		cprintf("yeah!\n");
+		return ;
+	}
 
 	// If we made it to this point, then no other environment was
 	// scheduled, so we should return to the current environment
@@ -320,7 +367,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	//cprintf("cs : %d\n",tf->tf_cs);
-	if (tf->tf_cs == 0)
+	if ((tf->tf_cs & 3) == 0)
 	{
 		panic("system page fault!");
 	}

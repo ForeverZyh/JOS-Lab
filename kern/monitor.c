@@ -14,8 +14,7 @@
 #include <kern/pmap.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
-
-
+static bool enable_single_step = false;
 struct Command {
 	const char *name;
 	const char *desc;
@@ -31,6 +30,8 @@ static struct Command commands[] = {
 	{ "setperms", "Set the perm of the page of that virutal address", mon_setperms},
 	{ "dump", "Dump the pages of that virutal/physical address", mon_dump},
 	{ "lookmem", "Look up some bits/bytes in that virutal/physical address", mon_lookmem},
+	{ "s", "Single step to next instruction", mon_singlestep},
+	{ "c", "Continue execution", mon_continue},
 	
 };
 
@@ -329,6 +330,46 @@ mon_lookmem(int argc, char **argv, struct Trapframe *tf)
 	return 0;
 }
 
+int
+mon_singlestep(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc > 1)
+	{
+		cprintf("usage:no extra arguments.\n");
+	}
+	else
+	{
+		if (!enable_single_step)
+		{
+			enable_single_step = true;
+			uint32_t eflags = read_eflags();
+			eflags |= FL_TF;
+			//tf->tf_eflags |= FL_TF;
+			cprintf("eflags: %x\n", eflags);
+			cprintf("tf_eflags: %x\n", tf->tf_eflags);
+			write_eflags(eflags);
+		}
+		return -1;
+	}
+	return 0;
+}
+
+int
+mon_continue(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc > 1)
+	{
+		cprintf("usage:no extra arguments.\n");
+	}
+	else
+	{
+		enable_single_step = false;
+		tf->tf_eflags &= ~FL_TF;
+		return -1;
+	}
+	return 0;
+}
+
 /***** Kernel monitor command interpreter *****/
 
 #define WHITESPACE "\t\r\n "
@@ -377,15 +418,24 @@ void
 monitor(struct Trapframe *tf)
 {
 	char *buf;
-
-	cprintf("Welcome to the JOS kernel monitor!\n");
-	cprintf("Type 'help' for a list of commands.\n");
+	if (enable_single_step)
+	{
+		cprintf("eip: %x\n", tf->tf_eip);
+		//enable_single_step = false;
+	}
+	else
+	{
+		cprintf("Welcome to the JOS kernel monitor!\n");
+		cprintf("Type 'help' for a list of commands.\n");
+	}
 
 	if (tf != NULL)
 		print_trapframe(tf);
 
 	while (1) {
-		buf = readline("K> ");
+		if (enable_single_step)
+			buf = readline("D> ");
+		else buf = readline("K> ");
 		if (buf != NULL)
 			if (runcmd(buf, tf) < 0)
 				break;

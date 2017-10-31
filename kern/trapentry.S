@@ -22,6 +22,9 @@
  * where NAME is the argument passed to TRAPHANDLER.
  */
 #define TRAPHANDLER(name, num)						\
+	.data;	\
+	.long name;\
+	.text;\
 	.globl name;		/* define global symbol for 'name' */	\
 	.type name, @function;	/* symbol type is function */		\
 	.align 2;		/* align function definition */		\
@@ -34,6 +37,9 @@
  * format in either case.
  */
 #define TRAPHANDLER_NOEC(name, num)					\
+	.data;	\
+	.long name;\
+	.text;\
 	.globl name;							\
 	.type name, @function;						\
 	.align 2;							\
@@ -42,27 +48,34 @@
 	pushl $(num);							\
 	jmp _alltraps
 
+.data
+	.p2align 2
+	.globl funs
+	funs:
+
 .text
 
 /*
  * Lab 3: Your code here for generating entry points for the different traps.
  */
-TRAPHANDLER_NOEC(handler0, 0);
-TRAPHANDLER_NOEC(handler1, 1);
-TRAPHANDLER_NOEC(handler3, 3);
-TRAPHANDLER_NOEC(handler4, 4);
-TRAPHANDLER_NOEC(handler5, 5);
-TRAPHANDLER_NOEC(handler6, 6);
-TRAPHANDLER_NOEC(handler7, 7);
-TRAPHANDLER_NOEC(handler9, 9);
-TRAPHANDLER_NOEC(handler16, 16);
+TRAPHANDLER_NOEC(handler0, 0)
+TRAPHANDLER_NOEC(handler1, 1)
+TRAPHANDLER_NOEC(handler3, 3)
+TRAPHANDLER_NOEC(handler4, 4)
+TRAPHANDLER_NOEC(handler5, 5)
+TRAPHANDLER_NOEC(handler6, 6)
+TRAPHANDLER_NOEC(handler7, 7)
+TRAPHANDLER(handler8, 8)
+TRAPHANDLER_NOEC(handler9, 9)
+TRAPHANDLER(handler10, 10)
+TRAPHANDLER(handler11, 11)
+TRAPHANDLER(handler12, 12)
+TRAPHANDLER(handler13, 13)
+TRAPHANDLER(handler14, 14)
+TRAPHANDLER_NOEC(handler16, 16)
 TRAPHANDLER_NOEC(handler48, 48)
-TRAPHANDLER(handler8, 8);
-TRAPHANDLER(handler10, 10);
-TRAPHANDLER(handler11, 11);
-TRAPHANDLER(handler12, 12);
-TRAPHANDLER(handler13, 13);
-TRAPHANDLER(handler14, 14);
+
+
 
 
 

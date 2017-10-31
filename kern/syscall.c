@@ -277,7 +277,7 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 	// Return any appropriate return value.
 	// LAB 3: Your code here.
 	int32_t retval = 0;
-	//cprintf("here %d\n", syscallno);
+	//cprintf("here no: %x a1: %x a2: %x a3: %x a4: %x a5: %x\n", syscallno, a1, a2, a3, a4, a5);
 	switch (syscallno) {
 	case SYS_cputs:
 		//cprintf("here\n");
