@@ -343,9 +343,10 @@ mon_singlestep(int argc, char **argv, struct Trapframe *tf)
 		{
 			enable_single_step = true;
 			uint32_t eflags = read_eflags();
+			eflags |= FL_TF;
+			//tf->tf_eflags |= FL_TF;
 			cprintf("eflags: %x\n", eflags);
 			cprintf("tf_eflags: %x\n", tf->tf_eflags);
-			eflags |= FL_TF;
 			write_eflags(eflags);
 		}
 		return -1;
@@ -363,6 +364,7 @@ mon_continue(int argc, char **argv, struct Trapframe *tf)
 	else
 	{
 		enable_single_step = false;
+		tf->tf_eflags &= ~FL_TF;
 		return -1;
 	}
 	return 0;

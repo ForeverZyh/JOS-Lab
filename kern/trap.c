@@ -232,7 +232,7 @@ trap_dispatch(struct Trapframe *tf)
 static bool enable_single_step()
 {
 	uint32_t dr6 = read_dr6();
-	cprintf("dr6: %x\n", dr6);
+	//cprintf("dr6: %x\n", dr6);
 	const uint32_t BS = 0x4000;
 	if (BS & dr6)
 	{
@@ -277,7 +277,10 @@ trap(struct Trapframe *tf)
 	trap_dispatch(tf);
 	
 	if (enable_single_step())
+	{
+		cprintf("yeah!\n");
 		return ;
+	}
 
 	// Return to the current environment, which should be running.
 	assert(curenv && curenv->env_status == ENV_RUNNING);
@@ -297,7 +300,7 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 3: Your code here.
 	//cprintf("cs : %d\n",tf->tf_cs);
-	if (tf->tf_cs == 0)
+	if ((tf->tf_cs & 3) == 0)
 	{
 		panic("system page fault!");
 	}
