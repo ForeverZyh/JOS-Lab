@@ -1,0 +1,2 @@
+When many interuptions happen simultaneously, the hardware will push somethings
+to kernel stack at the same time, which leads to erroneous behaviors.

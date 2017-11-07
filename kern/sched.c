@@ -29,7 +29,32 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
-
+	struct Env *it = envs, *end = envs + NENV;
+	if (curenv) 
+	{
+		it = curenv;
+		end = curenv;
+		++it;
+	}
+	while (it != end)
+	{
+		if (it >= envs + NENV)
+			it = envs;
+		if (it == end) break;
+		if (it->env_status == ENV_RUNNABLE)
+		{
+			env_run(it);
+			return;
+		}
+		++it;
+		//cprintf("%x %x %x\n", (uint32_t)it, (uint32_t)(envs + NENV), (uint32_t) end);
+	}
+	if (curenv && curenv->env_status == ENV_RUNNING)
+	{
+		env_run(curenv);
+		return;
+	}
+	cprintf("halt!\n");
 	// sched_halt never returns
 	sched_halt();
 }

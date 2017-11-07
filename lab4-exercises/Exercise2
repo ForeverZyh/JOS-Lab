@@ -1,0 +1,4 @@
+If we don't use MPBOOTPHYS, the linker will fill linker address to them. But 
+mpentry.o is linked with kernel, and is supposed to run above KERNBASE. So we
+need to calculate the relative addresses and transfer them to addresses which
+begin on 0x7000.
