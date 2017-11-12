@@ -54,7 +54,6 @@ sched_yield(void)
 		env_run(curenv);
 		return;
 	}
-	//cprintf("halt!\n");
 	// sched_halt never returns
 	sched_halt();
 }

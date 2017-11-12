@@ -108,8 +108,10 @@ trap_init(void)
 		int id = idt_id[i];
 		int arg_is_trap = find(is_trap, is_trap_cnt, id);
 		int arg_user_perm = find(user_perm, user_perm_cnt, id) * 3;
-		SETGATE(idt[id], arg_is_trap, GD_KT, funs[i], arg_user_perm);
+		SETGATE(idt[id], 0, GD_KT, funs[i], arg_user_perm);
 	}
+	for(int i = 0;i < 16;i++)
+		SETGATE(idt[i + IRQ_OFFSET], 0, GD_KT, funs[idt_id_cnt + i], 0);
 	/*SETGATE(idt[0], 0, GD_KT, handler0, 0);
 	SETGATE(idt[1], 0, GD_KT, handler1, 0);
 	SETGATE(idt[3], 1, GD_KT, handler3, 3);
@@ -238,7 +240,11 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
-    
+    if (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER)
+    {
+    	lapic_eoi();
+    	sched_yield();
+    }
     
     // Handle processor exceptions.
     // LAB 3: Your code here.
