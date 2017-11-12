@@ -236,6 +236,8 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	if ((perm & PTE_W) && !(*pgtable & PTE_W)) return -E_INVAL;
 	error_code = page_insert(dst->env_pgdir, page, dstva, perm);
 	if (error_code < 0) return error_code;
+	// if (dstenvid == 0 && (uint32_t) srcva == 0xeebfd000)
+	// 	panic("panic");
 	return 0;
 }
 

@@ -420,6 +420,8 @@ page_fault_handler(struct Trapframe *tf)
 			len = sizeof(struct UTrapframe);
 			new_esp = UXSTACKTOP - len;
 		}
+		//cprintf("trap_esp: %08x\n", tf->tf_esp);
+		//cprintf("trap_eip: %08x\n", tf->tf_eip);
 		struct UTrapframe *ut = (struct UTrapframe *) new_esp;
 		user_mem_assert(curenv, (void*) new_esp, len, PTE_W);
 		ut->utf_fault_va = fault_va;
