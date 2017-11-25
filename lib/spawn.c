@@ -299,10 +299,22 @@ map_segment(envid_t child, uintptr_t va, size_t memsz,
 
 // Copy the mappings for shared pages into the child address space.
 static int
-copy_shared_pages(envid_t child)
+copy_shared_pages(envid_t envid)
 {
 	// LAB 5: Your code here.
-
+	int error_code;
+	for(uint32_t i = 0;i < USTACKTOP;i += PGSIZE)
+	{
+		if ((uvpd[PDX(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_SHARE))
+			if ((error_code = sys_page_map(0, (void*) i, envid, (void*) i, uvpt[PGNUM(i)] & PTE_SYSCALL)) < 0)
+				panic("copy_shared_pages: shared page, 0 -> envid %e!", error_code);
+	}
+	if (sys_page_alloc(envid, (void*) (UXSTACKTOP - PGSIZE), PTE_W | PTE_U | PTE_P) < 0)
+		panic("copy_shared_pages: sys_page_map on UXSTACKTOP");
+	if (sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall) < 0)
+		panic("copy_shared_pages: sys_env_set_pgfault_upcall");
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0)
+		panic("copy_shared_pages: sys_env_set_status");
 	return 0;
 }
 

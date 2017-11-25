@@ -67,18 +67,26 @@ duppage(envid_t envid, unsigned pn)
 	uint32_t addr = pn * PGSIZE;
 	int error_code = 0;
 	//cprintf("%08x\n", addr);
-	if (uvpt[pn] & (PTE_W | PTE_COW))
+	if (uvpt[pn] & PTE_SHARE)
 	{
-		if ((error_code = sys_page_map(0, (void*) addr, envid, (void*) addr, PTE_COW | PTE_U | PTE_P)) < 0)
-			panic("duppage: COW, 0 -> envid %e!", error_code);
-		if ((error_code = sys_page_map(0, (void*) addr, 0, (void*) addr, PTE_COW | PTE_U | PTE_P)) < 0)
-			panic("duppage: COW, 0 -> 0 %e!", error_code);
-		//cprintf("enen\n");
+		if ((error_code = sys_page_map(0, (void*) addr, envid, (void*) addr, uvpt[pn] & PTE_SYSCALL)) < 0)
+			panic("duppage: shared page, 0 -> envid %e!", error_code);
 	}
 	else
 	{
-		if (sys_page_map(0, (void*) addr, envid, (void*) addr, PTE_U | PTE_P) < 0)
-			panic("duppage: read-only, 0 -> envid %e!", error_code);
+		if (uvpt[pn] & (PTE_W | PTE_COW))
+		{
+			if ((error_code = sys_page_map(0, (void*) addr, envid, (void*) addr, PTE_COW | PTE_U | PTE_P)) < 0)
+				panic("duppage: COW, 0 -> envid %e!", error_code);
+			if ((error_code = sys_page_map(0, (void*) addr, 0, (void*) addr, PTE_COW | PTE_U | PTE_P)) < 0)
+				panic("duppage: COW, 0 -> 0 %e!", error_code);
+			//cprintf("enen\n");
+		}
+		else
+		{
+			if ((error_code = sys_page_map(0, (void*) addr, envid, (void*) addr, PTE_U | PTE_P)) < 0)
+				panic("duppage: read-only, 0 -> envid %e!", error_code);
+		}
 	}
 	return 0;
 }
