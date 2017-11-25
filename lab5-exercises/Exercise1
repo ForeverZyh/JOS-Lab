@@ -1,0 +1,1 @@
+No need, when context switch, hardware will save the EFLAGS and etc. for us.

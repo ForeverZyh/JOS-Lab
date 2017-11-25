@@ -319,6 +319,7 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
 	struct Env *e;
 	int error_code = envid2env(envid, &e, 0);
 	if (error_code < 0) return error_code;
+	//cprintf("try send env %08x\n", e);
 	if (e->env_ipc_recving == 0) return -E_IPC_NOT_RECV;
 	if ((uint32_t) srcva < UTOP)
 	{
@@ -363,6 +364,8 @@ sys_ipc_recv(void *dstva)
 	// LAB 4: Your code here.
 	if ((uint32_t)dstva < UTOP && ((uint32_t)dstva & (PGSIZE - 1)))
 		return -E_INVAL;
+	//cprintf("try recv env %08x\n", curenv);
+	curenv->env_ipc_from = 0;
 	curenv->env_ipc_recving = 1;
 	curenv->env_ipc_dstva = dstva;
 	curenv->env_status = ENV_NOT_RUNNABLE;

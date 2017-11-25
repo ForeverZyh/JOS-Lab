@@ -29,6 +29,15 @@ sched_yield(void)
 	// below to halt the cpu.
 
 	// LAB 4: Your code here.
+	/*int count = 0;
+	for(int i = 0;i < 2;i++)
+	{
+		if (envs[i].env_status == ENV_RUNNABLE) cprintf("%08x ENV_RUNNABLE. ", envs + i);
+		if (envs[i].env_status == ENV_RUNNING) cprintf("%08x ENV_RUNNING. ", envs + i);
+		if (envs[i].env_status == ENV_NOT_RUNNABLE) cprintf("%08x ENV_NOT_RUNNABLE. ", envs + i);
+		cprintf("%d\n", envs[i].env_type);
+	}*/
+	//cprintf("ENV_RUNNABLE count: %d\n", count);
 	struct Env *it = envs, *end = envs + NENV;
 	if (curenv) 
 	{
@@ -43,6 +52,8 @@ sched_yield(void)
 		if (it == end) break;
 		if (it->env_status == ENV_RUNNABLE)
 		{
+			//cprintf("envaddr: %08x\n", it);			
+			//cprintf ("at %s, line %d\n", __FILE__, __LINE__);
 			env_run(it);
 			return;
 		}
@@ -51,6 +62,8 @@ sched_yield(void)
 	}
 	if (curenv && curenv->env_status == ENV_RUNNING)
 	{
+		//cprintf("envaddr: %08x\n", curenv);
+		//cprintf ("at %s, line %d\n", __FILE__, __LINE__);
 		env_run(curenv);
 		return;
 	}

@@ -23,6 +23,7 @@ int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
 	// LAB 4: Your code here.
+	//cprintf("%08x %08x\n", (uint32_t) pg, *perm_store);
 	if (pg == NULL) pg = (void*) -1;
 	if (from_env_store) *from_env_store = 0;
 	if (perm_store) *perm_store = 0;
@@ -49,6 +50,7 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 	if (pg == NULL) pg = (void*) -1;
 	while ((error_code = sys_ipc_try_send(to_env, val, pg, perm)) != 0)
 	{
+		//cprintf("hanging here?\n");
 		if (error_code != -E_IPC_NOT_RECV)
 			panic("ipc_send: %e", error_code);
 		sys_yield();

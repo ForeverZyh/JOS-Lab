@@ -214,7 +214,13 @@ serve_read(envid_t envid, union Fsipc *ipc)
 		cprintf("serve_read %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// Lab 5: Your code here:
-	return 0;
+	struct OpenFile *of;
+	int r;
+	if ((r = openfile_lookup(envid, req->req_fileid, &of)) < 0)
+		return r;
+	if ((r = file_read(of->o_file, ret->ret_buf, req->req_n, of->o_fd->fd_offset)) < 0)
+		return r;
+	return r;
 }
 
 
@@ -229,7 +235,13 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 		cprintf("serve_write %08x %08x %08x\n", envid, req->req_fileid, req->req_n);
 
 	// LAB 5: Your code here.
-	panic("serve_write not implemented");
+	struct OpenFile *of;
+	int r;
+	if ((r = openfile_lookup(envid, req->req_fileid, &of)) < 0)
+		return r;
+	if ((r = file_write(of->o_file, req->req_buf, req->req_n, of->o_fd->fd_offset)) < 0)
+		return r;
+	return r;
 }
 
 // Stat ipc->stat.req_fileid.  Return the file's struct Stat to the
@@ -299,6 +311,7 @@ serve(void)
 	void *pg;
 
 	while (1) {
+		//cprintf("are you realy hanging all the time?\n");
 		perm = 0;
 		req = ipc_recv((int32_t *) &whom, fsreq, &perm);
 		if (debug)
@@ -311,7 +324,6 @@ serve(void)
 				whom);
 			continue; // just leave it hanging...
 		}
-
 		pg = NULL;
 		if (req == FSREQ_OPEN) {
 			r = serve_open(whom, (struct Fsreq_open*)fsreq, &pg, &perm);
