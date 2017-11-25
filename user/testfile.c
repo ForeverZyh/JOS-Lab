@@ -31,6 +31,7 @@ umain(int argc, char **argv)
 		panic("serve_open /not-found: %e", r);
 	else if (r >= 0)
 		panic("serve_open /not-found succeeded!");
+
 	if ((r = xopen("/newmotd", O_RDONLY)) < 0)
 		panic("serve_open /newmotd: %e", r);
 	if (FVA->fd_dev_id != 'f' || FVA->fd_offset != 0 || FVA->fd_omode != O_RDONLY)

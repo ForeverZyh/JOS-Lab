@@ -220,6 +220,7 @@ serve_read(envid_t envid, union Fsipc *ipc)
 		return r;
 	if ((r = file_read(of->o_file, ret->ret_buf, req->req_n, of->o_fd->fd_offset)) < 0)
 		return r;
+	of->o_fd->fd_offset += r;
 	return r;
 }
 
@@ -241,6 +242,7 @@ serve_write(envid_t envid, struct Fsreq_write *req)
 		return r;
 	if ((r = file_write(of->o_file, req->req_buf, req->req_n, of->o_fd->fd_offset)) < 0)
 		return r;
+	of->o_fd->fd_offset += r;
 	return r;
 }
 
@@ -317,7 +319,7 @@ serve(void)
 		if (debug)
 			cprintf("fs req %d from %08x [page %08x: %s]\n",
 				req, whom, uvpt[PGNUM(fsreq)], fsreq);
-
+		//cprintf("yes! recv! %d == %d ?\n", req, FSREQ_OPEN);
 		// All requests must contain an argument page
 		if (!(perm & PTE_P)) {
 			cprintf("Invalid request from %08x: no argument page\n",
@@ -327,12 +329,15 @@ serve(void)
 		pg = NULL;
 		if (req == FSREQ_OPEN) {
 			r = serve_open(whom, (struct Fsreq_open*)fsreq, &pg, &perm);
+			//cprintf("what indeed have you got? %d\n", r);
 		} else if (req < ARRAY_SIZE(handlers) && handlers[req]) {
 			r = handlers[req](whom, fsreq);
 		} else {
 			cprintf("Invalid request code %d from %08x\n", req, whom);
 			r = -E_INVAL;
 		}
+		//cprintf("to whom you send? %08x\nwhat value is about to send? %d\n", whom, r);
+		//cprintf ("at %s, line %d\n", __FILE__, __LINE__);
 		ipc_send(whom, r, pg, perm);
 		sys_page_unmap(0, fsreq);
 	}
