@@ -27,6 +27,7 @@ spawn(const char *prog, const char **argv)
 	struct Elf *elf;
 	struct Proghdr *ph;
 	int perm;
+	//cprintf("spwan: %s\n", prog);
 
 	// This code follows this procedure:
 	//
@@ -135,7 +136,6 @@ spawn(const char *prog, const char **argv)
 
 	if ((r = sys_env_set_status(child, ENV_RUNNABLE)) < 0)
 		panic("sys_env_set_status: %e", r);
-
 	return child;
 
 error:
@@ -302,6 +302,7 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+
 	return 0;
 }
 

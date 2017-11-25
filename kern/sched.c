@@ -30,7 +30,7 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 	//int count = 0;
-	/*for(int i = 0;i < 2;i++)
+	/*for(int i = 0;i < 3;i++)
 	{
 		if (envs[i].env_status == ENV_RUNNABLE) cprintf("%08x ENV_RUNNABLE. ", envs + i);
 		if (envs[i].env_status == ENV_RUNNING) cprintf("%08x ENV_RUNNING. ", envs + i);

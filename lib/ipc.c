@@ -28,16 +28,15 @@ ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 	if (from_env_store) *from_env_store = 0;
 	if (perm_store) *perm_store = 0;
 	int error_code = sys_ipc_recv(pg);
-	struct Env *curenv = (struct Env *) envs + ENVX(sys_getenvid());
 	/*cprintf("NULL and NULL? %d %d\n", from_env_store, perm_store);
 	cprintf("error_code? %d\n", error_code);
-	cprintf("show me the value you recved: %d\n", curenv->env_ipc_value);
+	cprintf("show me the value you recved: %d\n", thisenv->env_ipc_value);
 	cprintf("who are you? %08x\n", thisenv->env_id);
 	cprintf ("at %s, line %d\n", __FILE__, __LINE__);*/
 	if (error_code) return error_code;
-	if (from_env_store) *from_env_store = curenv->env_ipc_from;
-	if (perm_store) *perm_store = curenv->env_ipc_perm;
-	return curenv->env_ipc_value;
+	if (from_env_store) *from_env_store = thisenv->env_ipc_from;
+	if (perm_store) *perm_store = thisenv->env_ipc_perm;
+	return thisenv->env_ipc_value;
 }
 
 // Send 'val' (and 'pg' with 'perm', if 'pg' is nonnull) to 'toenv'.
