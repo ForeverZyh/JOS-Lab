@@ -97,6 +97,7 @@ sys_exofork(void)
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_tf = curenv->env_tf;
 	e->env_tf.tf_regs.reg_eax = 0;
+	e->env_ipc_to.valid = false;
 	return e->env_id;
 }
 
@@ -351,11 +352,32 @@ sys_ipc_recv(void *dstva)
 	// LAB 4: Your code here.
 	if ((uint32_t)dstva < UTOP && ((uint32_t)dstva & (PGSIZE - 1)))
 		return -E_INVAL;
+	bool flag = false;
 	curenv->env_ipc_recving = 1;
 	curenv->env_ipc_dstva = dstva;
 	curenv->env_status = ENV_NOT_RUNNABLE;
+	for(int i = 0;i < NENV;i++)
+		if (envs[i].env_ipc_to.valid && ENVX(envs[i].env_ipc_to.to_env) == ENVX(curenv->env_id))
+		{
+			envs[i].env_status = ENV_RUNNABLE;
+			envs[i].env_ipc_to.valid = false;
+			break;
+		}
 	sys_yield();
 	panic("return ?");
+}
+
+static int
+sys_ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
+{
+	int error_code;
+	if ((error_code = sys_ipc_try_send(to_env, val, pg, perm)) != 0)
+	{
+		curenv->env_ipc_to.valid = true;
+		curenv->env_ipc_to.to_env = to_env;
+		curenv->env_status = ENV_NOT_RUNNABLE;
+	}
+	return error_code;
 }
 
 // Dispatches to the correct kernel function, passing the arguments.
@@ -407,6 +429,9 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		break;
 	case SYS_ipc_recv:
 		retval = sys_ipc_recv((void*)a1);
+		break;
+	case SYS_ipc_send:
+		retval = sys_ipc_send(a1, a2, (void*)a3, a4);
 		break;
 	default:
 		return -E_INVAL;

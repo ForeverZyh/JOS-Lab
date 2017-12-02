@@ -43,6 +43,11 @@ enum EnvType {
 	ENV_TYPE_USER = 0,
 };
 
+struct Send{
+	envid_t to_env;
+	bool valid;
+};
+
 struct Env {
 	struct Trapframe env_tf;	// Saved registers
 	struct Env *env_link;		// Next free Env
@@ -65,6 +70,7 @@ struct Env {
 	uint32_t env_ipc_value;		// Data value sent to us
 	envid_t env_ipc_from;		// envid of the sender
 	int env_ipc_perm;		// Perm of page mapping received
+	struct Send env_ipc_to;			// Which envid send message to
 };
 
 #endif // !JOS_INC_ENV_H

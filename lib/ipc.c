@@ -47,11 +47,13 @@ ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 	// LAB 4: Your code here.
 	int error_code;
 	if (pg == NULL) pg = (void*) -1;
-	while ((error_code = sys_ipc_try_send(to_env, val, pg, perm)) != 0)
+	if ((error_code = sys_ipc_send(to_env, val, pg, perm)) != 0)
 	{
 		if (error_code != -E_IPC_NOT_RECV)
 			panic("ipc_send: %e", error_code);
 		sys_yield();
+		if ((error_code = sys_ipc_try_send(to_env, val, pg, perm)) != 0)
+			panic("ipc_send: %e", error_code);
 	}
 }
 
