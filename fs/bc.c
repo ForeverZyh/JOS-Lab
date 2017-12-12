@@ -48,9 +48,9 @@ bc_pgfault(struct UTrapframe *utf)
 	// the disk.
 	//
 	// LAB 5: you code here:
+	addr = (void*) ((uint32_t)addr & ~(BLKSIZE - 1));
 	if ((r = sys_page_alloc(0, addr, PTE_W | PTE_U | PTE_P)) < 0)
 		panic("in bc_pgfault, sys_page_alloc: %e", r);
-	addr = (void*) ((uint32_t)addr & ~(BLKSIZE - 1));
 	if ((r = ide_read(blockno * (BLKSIZE / SECTSIZE), addr, BLKSIZE / SECTSIZE)) < 0)
 		panic("in bc_pgfault, ide_read: %e", r);
 

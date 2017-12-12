@@ -141,7 +141,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	user_mem_assert(e, tf, sizeof(struct Trapframe), PTE_U);
 	e->env_tf = *tf;
 	e->env_tf.tf_eflags |= FL_IF;
-	e->env_tf.tf_eflags &= ~FL_IOPL_3;
+	//e->env_tf.tf_eflags &= ~FL_IOPL_3;
 	//e->env_tf.tf_cs = GD_UT | 3;
 	return 0;
 }
