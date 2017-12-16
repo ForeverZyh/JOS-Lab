@@ -50,7 +50,7 @@ free_block(uint32_t blockno)
 // allocate a block, immediately flush the changed bitmap block
 // to disk.
 //
-// Return block number allocated on success,
+// Return block umber allocated on success,
 // -E_NO_DISK if we are out of blocks.
 //
 // Hint: use free_block as an example for manipulating the bitmap.
@@ -69,6 +69,21 @@ alloc_block(void)
 			flush_block(bitmap);
 			return i;
 		}
+	for(int i = 0;i < super->s_nblocks;i++)
+	{
+		void* addr = diskaddr(i);
+		addr = (void*) ((uint32_t)addr & ~(BLKSIZE - 1));
+		if (!va_is_mapped(addr))
+			panic("Eviction error!");
+		if (!(uvpt[PGNUM(addr)] & PTE_A))
+		{
+			cprintf("Eviction: block %d\n", i);
+			flush_block(addr);
+			bitmap[i/32] ^= 1<<(i%32);
+			flush_block(bitmap);
+			return i;
+		}
+	}
 	return -E_NO_DISK;
 }
 
