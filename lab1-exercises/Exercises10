@@ -1,6 +1,0 @@
-5 32-bits words
-ebp
-ebx x+1
-ebx x
-eax x-1
-eip call

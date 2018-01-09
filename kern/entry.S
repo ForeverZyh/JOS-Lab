@@ -1,96 +1,44 @@
-/* See COPYRIGHT for copyright information. */
+// I copy & paste this code from http://wiki.osdev.org/ARM_RaspberryPi_Tutorial_C
 
-#include <inc/mmu.h>
-#include <inc/memlayout.h>
-
-# Shift Right Logical 
-#define SRL(val, shamt)		(((val) >> (shamt)) & ~(-1 << (32 - (shamt))))
-
-
-###################################################################
-# The kernel (this code) is linked at address ~(KERNBASE + 1 Meg), 
-# but the bootloader loads it at address ~1 Meg.
-#	
-# RELOC(x) maps a symbol x from its link address to its actual
-# location in physical memory (its load address).	 
-###################################################################
-
-#define	RELOC(x) ((x) - KERNBASE)
-
-#define MULTIBOOT_HEADER_MAGIC (0x1BADB002)
-#define MULTIBOOT_HEADER_FLAGS (0)
-#define CHECKSUM (-(MULTIBOOT_HEADER_MAGIC + MULTIBOOT_HEADER_FLAGS))
-
-###################################################################
-# entry point
-###################################################################
-
-.text
-
-# The Multiboot header
-.align 4
-.long MULTIBOOT_HEADER_MAGIC
-.long MULTIBOOT_HEADER_FLAGS
-.long CHECKSUM
-
-# '_start' specifies the ELF entry point.  Since we haven't set up
-# virtual memory when the bootloader enters this code, we need the
-# bootloader to jump to the *physical* address of the entry point.
-.globl		_start
-_start = RELOC(entry)
-
-.globl entry
-entry:
-	movw	$0x1234,0x472			# warm boot
-
-	# We haven't set up virtual memory yet, so we're running from
-	# the physical address the boot loader loaded the kernel at: 1MB
-	# (plus a few bytes).  However, the C code is linked to run at
-	# KERNBASE+1MB.  Hence, we set up a trivial page directory that
-	# translates virtual addresses [KERNBASE, KERNBASE+4MB) to
-	# physical addresses [0, 4MB).  This 4MB region will be
-	# sufficient until we set up our real page table in mem_init
-	# in lab 2.
-
-	# Load the physical address of entry_pgdir into cr3.  entry_pgdir
-	# is defined in entrypgdir.c.
-	movl	$(RELOC(entry_pgdir)), %eax
-	movl	%eax, %cr3
-	# Turn on paging.
-	movl	%cr0, %eax
-	orl	$(CR0_PE|CR0_PG|CR0_WP), %eax
-	movl	%eax, %cr0
-
-	# Now paging is enabled, but we're still running at a low EIP
-	# (why is this okay?).  Jump up above KERNBASE before entering
-	# C code.
-	mov	$relocated, %eax
-	jmp	*%eax
-relocated:
-
-	# Clear the frame pointer register (EBP)
-	# so that once we get into debugging C code,
-	# stack backtraces will be terminated properly.
-	movl	$0x0,%ebp			# nuke frame pointer
-
-	# Set the stack pointer
-	movl	$(bootstacktop),%esp
-
-	# now to C code
-	call	i386_init
-
-	# Should never get here, but in case we do, just spin.
-spin:	jmp	spin
-
-
-.data
-###################################################################
-# boot stack
-###################################################################
-	.p2align	PGSHIFT		# force page alignment
-	.globl		bootstack
-bootstack:
-	.space		KSTKSIZE
-	.globl		bootstacktop   
-bootstacktop:
-
+// To keep this in the first portion of the binary.
+.section ".text.boot"
+ 
+// Make _start global.
+.globl _start
+ 
+// Entry point for the kernel.
+// r15 -> should begin execution at 0x8000.
+// r0 -> 0x00000000
+// r1 -> 0x00000C42
+// r2 -> 0x00000100 - start of ATAGS
+// preserve these registers as argument for kernel_main
+_start:
+	// Setup the stack.
+	mov sp, #0x8000
+ 
+	// Clear out bss.
+	ldr r4, =__bss_start
+	ldr r9, =__bss_end
+	mov r5, #0
+	mov r6, #0
+	mov r7, #0
+	mov r8, #0
+	b       2f
+ 
+1:
+	// store multiple at r4.
+	stmia r4!, {r5-r8}
+ 
+	// If we are still below bss_end, loop.
+2:
+	cmp r4, r9
+	blo 1b
+ 
+	// Call kernel_main
+	ldr r3, =kernel_main
+	blx r3
+ 
+	// halt
+halt:
+	wfe
+	b halt
