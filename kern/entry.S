@@ -1,5 +1,4 @@
-// I copy & paste this code from http://wiki.osdev.org/ARM_RaspberryPi_Tutorial_C
-
+// Actually I copy & paste this code from http://wiki.osdev.org/ARM_RaspberryPi_Tutorial_C
 // To keep this in the first portion of the binary.
 .section ".text.boot"
  
