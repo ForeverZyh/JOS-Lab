@@ -32,6 +32,7 @@ static struct Command commands[] = {
 	{ "lookmem", "Look up some bits/bytes in that virutal/physical address", mon_lookmem},
 	{ "s", "Single step to next instruction", mon_singlestep},
 	{ "c", "Continue execution", mon_continue},
+	{ "swap_key", "Swap Keyboard Mapping", mon_swapkey},
 	
 };
 
@@ -366,6 +367,27 @@ mon_continue(int argc, char **argv, struct Trapframe *tf)
 		enable_single_step = false;
 		tf->tf_eflags &= ~FL_TF;
 		return -1;
+	}
+	return 0;
+}
+
+int
+mon_swapkey(int argc, char **argv, struct Trapframe *tf)
+{
+	if (argc != 3)
+	{
+		cprintf("usage:swap_key key1 key2\n");
+	}
+	else
+	{
+		uint8_t key1 = (uint8_t)argv[1][0], key2 = (uint8_t)argv[2][0];
+		if (key1 >= 'A' && key1 <= 'Z')
+			key1 = key1 - 'A' + 'a';
+		if (key2 >= 'A' && key2 <= 'Z')
+			key2 = key2 - 'A' + 'a';
+		kbd_is_map[key1] = kbd_is_map[key2] = 1;
+		kbd_map[key1] = key2;
+		kbd_map[key2] = key1;
 	}
 	return 0;
 }

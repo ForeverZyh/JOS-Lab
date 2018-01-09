@@ -23,4 +23,7 @@ int cons_getc(void);
 void kbd_intr(void); // irq 1
 void serial_intr(void); // irq 4
 
+uint8_t kbd_map[256];
+bool kbd_is_map[256];
+
 #endif /* _CONSOLE_H_ */

@@ -332,7 +332,6 @@ kbd_proc_data(void)
 		return -1;
 
 	data = inb(KBDATAP);
-
 	if (data == 0xE0) {
 		// E0 escape character
 		shift |= E0ESC;
@@ -352,6 +351,16 @@ kbd_proc_data(void)
 	shift ^= togglecode[data];
 
 	c = charcode[shift & (CTL | SHIFT)][data];
+	if (c >= 'A' && c <= 'Z')
+	{
+		if (kbd_is_map[c - 'A' + 'a'])
+			c = kbd_map[c] - 'a' + 'A';
+	}
+	else
+	{	
+		if (kbd_is_map[c])
+			c = kbd_map[c];
+	}
 	if (shift & CAPSLOCK) {
 		if ('a' <= c && c <= 'z')
 			c += 'A' - 'a';

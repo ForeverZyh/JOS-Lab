@@ -21,5 +21,6 @@ int mon_dump(int argc, char **argv, struct Trapframe *tf);
 int mon_lookmem(int argc, char **argv, struct Trapframe *tf);
 int mon_singlestep(int argc, char **argv, struct Trapframe *tf);
 int mon_continue(int argc, char **argv, struct Trapframe *tf);
+int mon_swapkey(int argc, char **argv, struct Trapframe *tf);
 
 #endif	// !JOS_KERN_MONITOR_H
