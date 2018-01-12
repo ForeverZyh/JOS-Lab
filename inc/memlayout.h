@@ -100,8 +100,9 @@
 // Memory-mapped IO.
 #define MMIOLIM		(KSTACKTOP - PTSIZE)
 #define MMIOBASE	(MMIOLIM - PTSIZE)
+#define GPIOBASE	(MMIOBASE - PTSIZE)
 
-#define ULIM		(MMIOBASE)
+#define ULIM		(GPIOBASE)
 
 /*
  * User read-only mappings! Anything below here til UTOP are readonly to user.

@@ -1,42 +1,59 @@
+/* Simple linker script for the JOS kernel.
+   See the GNU ld 'info' manual ("info ld") to learn the syntax. */
+
 ENTRY(_start)
- 
+
 SECTIONS
 {
-    /* Starts at LOADER_ADDR. */
-    . = 0x8000;
-    __start = .;
-    __text_start = .;
-    .text :
-    {
-        KEEP(*(.text.boot))
-        *(.text)
+    /* Link the kernel at this address: "." means the current address */
+    . = 0xF0100000;
+
+    /* AT(...) gives the load address of this section, which tells
+       the boot loader where to load the kernel in physical memory */
+    .text : AT(0x100000) {
+        *(.text .stub .text.* .gnu.linkonce.t.*)
     }
-    . = ALIGN(4096); /* align to page size */
-    __text_end = .;
- 
-    __rodata_start = .;
-    .rodata :
-    {
-        *(.rodata)
+
+    PROVIDE(etext = .); /* Define the 'etext' symbol to this value */
+
+    .rodata : {
+        *(.rodata .rodata.* .gnu.linkonce.r.*)
     }
-    . = ALIGN(4096); /* align to page size */
-    __rodata_end = .;
- 
-    __data_start = .;
-    .data :
-    {
+
+    /* Include debugging information in kernel memory */
+    .stab : {
+        PROVIDE(__STAB_BEGIN__ = .);
+        *(.stab);
+        PROVIDE(__STAB_END__ = .);
+        BYTE(0)     /* Force the linker to allocate space
+                   for this section */
+    }
+
+    .stabstr : {
+        PROVIDE(__STABSTR_BEGIN__ = .);
+        *(.stabstr);
+        PROVIDE(__STABSTR_END__ = .);
+        BYTE(0)     /* Force the linker to allocate space
+                   for this section */
+    }
+
+    /* Adjust the address for the data segment to the next page */
+    . = ALIGN(0x1000);
+
+    /* The data segment */
+    .data : {
         *(.data)
     }
-    . = ALIGN(4096); /* align to page size */
-    __data_end = .;
- 
-    __bss_start = .;
-    .bss :
-    {
-        bss = .;
+
+    PROVIDE(edata = .);
+
+    .bss : {
         *(.bss)
     }
-    . = ALIGN(4096); /* align to page size */
-    __bss_end = .;
-    __end = .;
+
+    PROVIDE(end = .);
+
+    /DISCARD/ : {
+        *(.eh_frame .note.GNU-stack)
+    }
 }

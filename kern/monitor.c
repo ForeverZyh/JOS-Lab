@@ -5,7 +5,7 @@
 #include <inc/string.h>
 #include <inc/memlayout.h>
 #include <inc/assert.h>
-#include <inc/x86.h>
+#include <inc/arm.h>
 
 #include <kern/console.h>
 #include <kern/monitor.h>
