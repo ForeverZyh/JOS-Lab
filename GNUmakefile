@@ -71,7 +71,7 @@ KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs -std=gnu99
 # Include Makefrags for subdirectories
 include kern/Makefrag
 
-QEMUOPTS = -kernel $(OBJDIR)/kern/kernel -cpu arm1176 -m 256 -M raspi2 -serial stdio -gdb tcp::$(GDBPORT)
+QEMUOPTS = -kernel $(OBJDIR)/kern/kernel -cpu arm1176 -smp cpus=4,threads=1 -m 256 -M raspi2 -serial stdio -gdb tcp::$(GDBPORT)
 IMAGES = $(OBJDIR)/kern/kernel
 
 .gdbinit: .gdbinit.tmpl

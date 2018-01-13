@@ -38,6 +38,7 @@ entry:
 	// halt
 
 relocated:
+	mov r11, #0
 	ldr sp, =bootstacktop  // Setup the stack.
 	bl arm_init
 

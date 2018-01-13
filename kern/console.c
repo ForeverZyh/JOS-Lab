@@ -97,7 +97,7 @@ void uart_init()
 	mmio_write(GPPUDCLK0, 0x00000000);
  
 	// Clear pending interrupts.
-	mmio_write(UART0_ICR, 0x7FF);
+	mmio_write(UART0_ICR, 0xF);
  
 	// Set integer & fractional part of baud rate.
 	// Divider = UART_CLOCK/(16 * Baud)
@@ -126,20 +126,6 @@ void uart_putc(unsigned char c)
 	while ( mmio_read(UART0_FR) & (1 << 5) ) { }
 	mmio_write(UART0_DR, c);
 }
- 
-unsigned char uart_getc()
-{
-    // Wait for UART to have received something.
-    while ( mmio_read(UART0_FR) & (1 << 4) ) { }
-    return mmio_read(UART0_DR);
-}
- 
-void uart_puts(const char* str)
-{
-	for (size_t i = 0; str[i] != '\0'; i ++)
-		uart_putc((unsigned char)str[i]);
-}
-
 
 /***** General device-independent console code *****/
 // Here we manage the console input buffer,
