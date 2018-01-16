@@ -100,7 +100,7 @@
 // Memory-mapped IO.
 #define MMIOLIM		(KSTACKTOP - PTSIZE)
 #define MMIOBASE	(MMIOLIM - PTSIZE)
-#define GPIOBASE	(MMIOBASE - PTSIZE)
+#define GPIOBASE	(MMIOBASE)
 
 #define ULIM		(GPIOBASE)
 
