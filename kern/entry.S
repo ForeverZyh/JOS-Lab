@@ -1,21 +1,20 @@
 // Actually I copy & paste this code from http://wiki.osdev.org/ARM_RaspberryPi_Tutorial_C
 #include <inc/mmu.h>
 #include <inc/memlayout.h>
-// To keep this in the first portion of the binary.
-.section ".text.boot"
+#define	RELOC(x) ((x) - KERNBASE)
 
-// Make _start global.
-.globl _start
- 
-// Entry point for the kernel.
-// r15 -> should begin execution at 0x8000.
-// r0 -> 0x00000000
-// r1 -> 0x00000C42
-// r2 -> 0x00000100 - start of ATAGS
-// preserve these registers as argument for kernel_main
-_start:
+.text
+
+.globl		_start
+_start = RELOC(entry)
+
 .globl entry
 entry:
+	// Thanks CaoCao https://github.com/Friedrich1006/JOS/blob/arm
+    // Check CPU ID
+    mrc p15, 0, r0, c0, c0, 5
+    tst r0, #3
+    bne halt
 	// Turn on MMU
 	// Ref. http://www.embedded-bits.co.uk/2011/mmucode/
 	// Set c2 to address of entry_pgdir
