@@ -55,7 +55,7 @@ static void check_page_installed_pgdir(void);
 // This function may ONLY be used during initialization,
 // before the page_free_list list has been set up.
 static void *
-boot_alloc(uint32_t n)
+boot_alloc(uint32_t n, uint32_t aligned)
 {
 	static char *nextfree;	// virtual address of next byte of free memory
 	char *result;
@@ -67,7 +67,7 @@ boot_alloc(uint32_t n)
 	// to any kernel code or global variables.
 	if (!nextfree) {
 		extern char end[];
-		nextfree = ROUNDUP((char *) end, PGSIZE);
+		nextfree = ROUNDUP((char *) end, aligned);
 	}
 
 	// Allocate a chunk large enough to hold 'n' bytes, then update
@@ -76,7 +76,7 @@ boot_alloc(uint32_t n)
 	//
 	// LAB 2: Your code here.
 	result = nextfree;
-	nextfree = ROUNDUP((char *) nextfree + n, PGSIZE);
+	nextfree = ROUNDUP((char *) nextfree + n, aligned);
 	//cprintf("alloc: %x %x %d\n",result,nextfree,n);
 	return result;
 }
@@ -90,7 +90,20 @@ boot_alloc(uint32_t n)
 //
 // From UTOP to ULIM, the user is allowed to read but not write.
 // Above ULIM the user cannot read or write.
-int check_page_finish = 0;
+
+static void set_domain(int did, int priv) {
+    int clear_bit = ~(11 << (2 * did));
+    int new_priv = priv << (2 * did);
+    asm("mrc p15, 0, r0, c3, c0, 0\n"
+	    "and r0, r0, %0\n"
+	    "orr r0, r0, %1\n"
+	    "mcr p15, 0, r0, c3, c0, 0\n" 
+	    : 
+	    : "r"(clear_bit), "r"(new_priv)
+	    : "r0");
+}
+
+int check_finish = 0;
 void
 mem_init(void)
 {
@@ -105,7 +118,7 @@ mem_init(void)
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
-	kern_pgdir = (pde_t *) boot_alloc(PDXSIZE);
+	kern_pgdir = (pde_t *) boot_alloc(PDXSIZE, PDXSIZE);
 	memset(kern_pgdir, 0, PDXSIZE);
 
 	//////////////////////////////////////////////////////////////////////
@@ -124,7 +137,7 @@ mem_init(void)
 	// array.  'npages' is the number of physical pages in memory.  Use memset
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
-	pages = boot_alloc(sizeof(struct PageInfo) * npages);
+	pages = boot_alloc(sizeof(struct PageInfo) * npages, PGSIZE);
 	memset(pages, 0, sizeof(struct PageInfo) * npages);
 
 	//////////////////////////////////////////////////////////////////////
@@ -135,9 +148,11 @@ mem_init(void)
 	// or page_insert
 	page_init();
 	check_page_free_list(1);
+	check_finish = 1;
 	check_page_alloc();
+	check_finish = 1;
 	check_page();
-	check_page_finish = 1;
+	check_finish = 1;
 
 	//////////////////////////////////////////////////////////////////////
 	// Now we set up virtual memory
@@ -178,6 +193,7 @@ mem_init(void)
 	// Check that the initial page directory has been set up correctly.
 	// panic("haven't finished yet!");
 	check_kern_pgdir();
+	check_finish = 1;
 	boot_map_region(kern_pgdir, GPIOBASE, PTSIZE, 0x3f200002, PTE_APW | PTE_ENTRY_SMALL);
 
 	// Switch from the minimal entry page directory to the full kern_pgdir
@@ -188,12 +204,15 @@ mem_init(void)
 	// If the machine reboots at this point, you've probably set up your
 	// kern_pgdir wrong.
 	lcr3(PADDR(kern_pgdir));
+	set_domain(0, 0x1);
 	//panic("");
 
 	check_page_free_list(0);
+	check_finish = 1;
 
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
+	check_finish = 1;
 }
 
 // --------------------------------------------------------------
@@ -229,7 +248,7 @@ page_init(void)
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
 	size_t i;
-	char* endOfPages = boot_alloc(0);
+	char* endOfPages = boot_alloc(0, PGSIZE);
 	//cprintf("%08x\n", (uint32_t)endOfPages);
 	size_t beginIO = IOPHYSMEM / PGSIZE, endIO = EXTPHYSMEM / PGSIZE;
 	page_free_list = NULL;
@@ -284,7 +303,7 @@ page_free(struct PageInfo *pp)
 	if (pp->pp_ref || pp->pp_link != NULL)
 	{
 		if (pp->pp_ref != 0) panic("pp->pp_ref is nonzero.");
-		//if (pp->pp_link != NULL) panic("pp->pp_link is not NULL.");
+		//if (pp->pp_link != NULL) cprintf("pp->pp_link is not NULL.\n");
 	}
 	pp->pp_link = page_free_list;
 	page_free_list = pp;
@@ -326,10 +345,10 @@ page_decref(struct PageInfo* pp)
 pte_t* pagetable_alloc()
 {
 	static pte_t* now = NULL;
-	if (check_page_finish)
+	if (check_finish)
 	{
 		now = NULL;
-		check_page_finish = 0;
+		check_finish = 0;
 	}
 	if (!now || ((uint32_t) now & (PGSIZE - 1)) == 0)
 	{
@@ -544,7 +563,7 @@ check_page_free_list(bool only_low_memory)
 		if (PDX(page2pa(pp)) < pdx_limit)
 			memset(page2kva(pp), 0x97, 128);
 
-	first_free_page = (char *) boot_alloc(0);
+	first_free_page = (char *) boot_alloc(0, PGSIZE);
 	for (pp = page_free_list; pp; pp = pp->pp_link) {
 		// check that we didn't corrupt the free list itself
 		assert(pp >= pages);
