@@ -6,6 +6,7 @@
 
 #include <kern/monitor.h>
 #include <kern/console.h>
+#include <kern/pmap.h>
 
 // Test the stack backtrace function (lab 1 only)
 void
@@ -37,6 +38,9 @@ arm_init(void)
 
 	// Test the stack backtrace function (lab 1 only)
 	test_backtrace(5);
+
+	// Test memory
+	mem_init();
 
 	// Drop into the kernel monitor.
 	while (1)

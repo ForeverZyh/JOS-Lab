@@ -1,15 +1,14 @@
 /* See COPYRIGHT for copyright information. */
 
-#include <inc/x86.h>
+#include <inc/arm.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
 #include <inc/string.h>
 #include <inc/assert.h>
 
 #include <kern/pmap.h>
-#include <kern/kclock.h>
 
-// These variables are set by i386_detect_memory()
+// These variables are set by arm_detect_memory()
 size_t npages;			// Amount of physical memory (in pages)
 static size_t npages_basemem;	// Amount of base memory (in pages)
 
@@ -23,37 +22,10 @@ static struct PageInfo *page_free_list;	// Free list of physical pages
 // Detect machine's physical memory setup.
 // --------------------------------------------------------------
 
-static int
-nvram_read(int r)
-{
-	return mc146818_read(r) | (mc146818_read(r + 1) << 8);
-}
-
 static void
-i386_detect_memory(void)
+arm_detect_memory(void)
 {
-	size_t basemem, extmem, ext16mem, totalmem;
-
-	// Use CMOS calls to measure available base & extended memory.
-	// (CMOS calls return results in kilobytes.)
-	basemem = nvram_read(NVRAM_BASELO);
-	extmem = nvram_read(NVRAM_EXTLO);
-	ext16mem = nvram_read(NVRAM_EXT16LO) * 64;
-
-	// Calculate the number of physical pages available in both base
-	// and extended memory.
-	if (ext16mem)
-		totalmem = 16 * 1024 + ext16mem;
-	else if (extmem)
-		totalmem = 1 * 1024 + extmem;
-	else
-		totalmem = basemem;
-
-	npages = totalmem / (PGSIZE / 1024);
-	npages_basemem = basemem / (PGSIZE / 1024);
-
-	cprintf("Physical memory: %uK available, base = %uK, extended = %uK\n",
-		totalmem, basemem, totalmem - basemem);
+	npages_basemem = npages = 256 * 1024 * 1024 / (PGSIZE / 1024);
 }
 
 
@@ -124,15 +96,15 @@ mem_init(void)
 	size_t n;
 
 	// Find out how much memory the machine has (npages & npages_basemem).
-	i386_detect_memory();
+	arm_detect_memory();
 
 	// Remove this line when you're ready to test this function.
-	//panic("mem_init: This function is not finished\n");
+	panic("mem_init: This function is not finished\n");
 
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
-	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
-	memset(kern_pgdir, 0, PGSIZE);
+	kern_pgdir = (pde_t *) boot_alloc(PDXSIZE);
+	memset(kern_pgdir, 0, PDXSIZE);
 
 	//////////////////////////////////////////////////////////////////////
 	// Recursively insert PD in itself as a page table, to form
@@ -141,7 +113,7 @@ mem_init(void)
 	// following line.)
 
 	// Permissions: kernel R, user R
-	kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
+	// kern_pgdir[PDX(UVPT)] = PADDR(kern_pgdir) | PTE_U | PTE_P;
 
 	//////////////////////////////////////////////////////////////////////
 	// Allocate an array of npages 'struct PageInfo's and store it in 'pages'.
@@ -215,13 +187,6 @@ mem_init(void)
 	lcr3(PADDR(kern_pgdir));
 
 	check_page_free_list(0);
-
-	// entry.S set the really important flags in cr0 (including enabling
-	// paging).  Here we configure the rest of the flags that we care about.
-	cr0 = rcr0();
-	cr0 |= CR0_PE|CR0_PG|CR0_AM|CR0_WP|CR0_NE|CR0_MP;
-	cr0 &= ~(CR0_TS|CR0_EM);
-	lcr0(cr0);
 
 	// Some more checks, only possible after kern_pgdir is installed.
 	check_page_installed_pgdir();
@@ -502,7 +467,7 @@ tlb_invalidate(pde_t *pgdir, void *va)
 {
 	// Flush the entry only if we're modifying the current address space.
 	// For now, there is only one address space, so always invalidate.
-	invlpg(va);
+	asm("mcr p15, 0, %0, c8, c7, 1": : "r"(va));
 }
 
 
