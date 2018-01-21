@@ -48,6 +48,13 @@ sys_getenvid(void)
 	return curenv->env_id;
 }
 
+// Returns the current environment's env_priority.
+static int
+sys_getenv_priority(void)
+{
+	return curenv->env_priority;
+}
+
 // Destroy a given environment (possibly the currently running environment).
 //
 // Returns 0 on success, < 0 on error.  Errors are:
@@ -93,6 +100,33 @@ sys_exofork(void)
 	e->env_status = ENV_NOT_RUNNABLE;
 	e->env_tf = curenv->env_tf;
 	e->env_tf.tf_regs.reg_eax = 0;
+	return e->env_id;
+}
+
+// Allocate a new environment.
+// Returns envid of new environment, or < 0 on error.  Errors are:
+//	-E_NO_FREE_ENV if no free environment is available.
+//	-E_NO_MEM on memory exhaustion.
+static envid_t
+sys_exofork_priority(int priority)
+{
+	// Create the new environment with env_alloc(), from kern/env.c.
+	// It should be left as env_alloc created it, except that
+	// status is set to ENV_NOT_RUNNABLE, and the register set is copied
+	// from the current environment -- but tweaked so sys_exofork
+	// will appear to return 0.
+
+	// LAB 4: Your code here.
+	struct Env *e;
+	int error_code;
+	if (priority < 0 || priority > 0xff)
+		return -E_INVAL;
+	if ((error_code = env_alloc(&e, curenv->env_id)) < 0)
+		return error_code;
+	e->env_status = ENV_NOT_RUNNABLE;
+	e->env_tf = curenv->env_tf;
+	e->env_tf.tf_regs.reg_eax = 0;
+	e->env_priority = priority;
 	return e->env_id;
 }
 
@@ -436,6 +470,12 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		break;
 	case SYS_env_set_trapframe:
 		retval = sys_env_set_trapframe(a1, (void*)a2);
+		break;
+	case SYS_exofork_priority:
+		retval = sys_exofork_priority(a1);
+		break;
+	case SYS_getenv_priority:
+		retval = sys_getenv_priority();
 		break;
 	default:
 		return -E_INVAL;

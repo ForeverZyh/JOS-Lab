@@ -135,6 +135,34 @@ fork(void)
 	return envid;
 }
 
+envid_t
+fork_priority(int priority)
+{
+	// LAB 4: Your code here.
+	set_pgfault_handler(pgfault);
+	envid_t envid = sys_exofork_priority(priority);
+	if (envid < 0)
+		panic("fork: sys_exofork error!");
+	else if (envid == 0)
+	{
+		thisenv = envs + ENVX(sys_getenvid());
+		return 0;
+	}
+	for(uint32_t i = 0;i < USTACKTOP;i += PGSIZE)
+	{
+		if ((uvpd[PDX(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_P) && (uvpt[PGNUM(i)] & PTE_U))
+			duppage(envid, PGNUM(i));
+	}
+	//panic("here");
+	if (sys_page_alloc(envid, (void*) (UXSTACKTOP - PGSIZE), PTE_W | PTE_U | PTE_P) < 0)
+		panic("fork: sys_page_map on UXSTACKTOP");
+	if (sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall) < 0)
+		panic("fork: sys_env_set_pgfault_upcall");
+	if (sys_env_set_status(envid, ENV_RUNNABLE) < 0)
+		panic("fork: sys_env_set_status");
+	return envid;
+}
+
 // Challenge!
 int
 sfork(void)

@@ -4,10 +4,10 @@
 
 #define DEPTH 3
 
-void forktree(const char *cur);
+void forktree(const char *cur, int rand);
 
 void
-forkchild(const char *cur, char branch)
+forkchild(const char *cur, char branch, int rand)
 {
 	char nxt[DEPTH+1];
 
@@ -15,24 +15,25 @@ forkchild(const char *cur, char branch)
 		return;
 
 	snprintf(nxt, DEPTH+1, "%s%c", cur, branch);
-	if (fork() == 0) {
-		forktree(nxt);
+	if (fork_priority(rand) == 0) {
+	//if (fork() == 0) {
+		forktree(nxt, (rand * 233 + 7)&0xff);
 		exit();
 	}
 }
 
 void
-forktree(const char *cur)
+forktree(const char *cur, int rand)
 {
-	cprintf("%04x: I am '%s'\n", sys_getenvid(), cur);
+	cprintf("%04x: I am '%s' with priority %d\n", sys_getenvid(), cur, sys_getenv_priority());
 
-	forkchild(cur, '0');
-	forkchild(cur, '1');
+	forkchild(cur, '0', rand);
+	forkchild(cur, '1', rand);
 }
 
 void
 umain(int argc, char **argv)
 {
-	forktree("");
+	forktree("", 7);
 }
 

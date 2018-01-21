@@ -262,6 +262,9 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	// Also clear the IPC receiving flag.
 	e->env_ipc_recving = 0;
 
+	// default priority is 0x7f
+	e->env_priority = 0x7f;
+
 	// commit the allocation
 	env_free_list = e->env_link;
 	*newenv_store = e;
@@ -402,7 +405,10 @@ env_create(uint8_t *binary, enum EnvType type)
 	// LAB 5: Your code here.
 	e->env_type = type;
 	if (type == ENV_TYPE_FS)
+	{
 		e->env_tf.tf_eflags |= FL_IOPL_MASK;
+		e->env_priority = 0;
+	}
 }
 
 //

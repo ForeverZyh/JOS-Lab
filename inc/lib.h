@@ -45,6 +45,7 @@ char*	readline(const char *buf);
 void	sys_cputs(const char *string, size_t len);
 int	sys_cgetc(void);
 envid_t	sys_getenvid(void);
+int	sys_getenv_priority(void);
 int	sys_env_destroy(envid_t);
 void	sys_yield(void);
 static envid_t sys_exofork(void);
@@ -57,6 +58,7 @@ int	sys_page_map(envid_t src_env, void *src_pg,
 int	sys_page_unmap(envid_t env, void *pg);
 int	sys_ipc_try_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int	sys_ipc_recv(void *rcv_pg);
+static envid_t sys_exofork_priority(int priority);
 
 // This must be inlined.  Exercise for reader: why?
 static inline envid_t __attribute__((always_inline))
@@ -69,6 +71,16 @@ sys_exofork(void)
 	return ret;
 }
 
+static inline envid_t __attribute__((always_inline))
+sys_exofork_priority(int priority)
+{
+	envid_t ret;
+	asm volatile("pushl %3\n\tint %2"
+		     : "=a" (ret)
+		     : "a" (SYS_exofork_priority), "i" (T_SYSCALL), "d" (priority));
+	return ret;
+}
+
 // ipc.c
 void	ipc_send(envid_t to_env, uint32_t value, void *pg, int perm);
 int32_t ipc_recv(envid_t *from_env_store, void *pg, int *perm_store);
@@ -77,6 +89,7 @@ envid_t	ipc_find_env(enum EnvType type);
 // fork.c
 #define	PTE_SHARE	0x400
 envid_t	fork(void);
+envid_t	fork_priority(int priority);
 envid_t	sfork(void);	// Challenge!
 
 // fd.c

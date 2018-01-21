@@ -45,6 +45,8 @@ sched_yield(void)
 		end = curenv;
 		++it;
 	}
+	int now_priority = 0xff;
+	struct Env *to_run = envs;
 	while (it != end)
 	{
 		if (it >= envs + NENV)
@@ -53,12 +55,22 @@ sched_yield(void)
 		if (it->env_status == ENV_RUNNABLE)
 		{
 			//cprintf("envaddr: %08x\n", it);			
-			//cprintf ("at %s, line %d\n", __FILE__, __LINE__);
-			env_run(it);
-			return;
+			//cprintf ("at %s, line %d\n", __FILE__, __LINE__);			
+			if (now_priority > it->env_priority)
+			{
+				now_priority = it->env_priority;
+				to_run = it;
+			}
+			//env_run(it);
+			//return;
 		}
 		++it;
 		//cprintf("%x %x %x\n", (uint32_t)it, (uint32_t)(envs + NENV), (uint32_t) end);
+	}
+	if (now_priority < 0xff)
+	{
+		env_run(to_run);
+		return;
 	}
 	if (curenv && curenv->env_status == ENV_RUNNING)
 	{

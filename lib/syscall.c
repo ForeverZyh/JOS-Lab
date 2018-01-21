@@ -117,3 +117,10 @@ sys_ipc_recv(void *dstva)
 	return syscall(SYS_ipc_recv, 1, (uint32_t)dstva, 0, 0, 0, 0);
 }
 
+// sys_exofork_priority is inlined in lib.h
+
+int
+sys_getenv_priority(void)
+{
+	 return syscall(SYS_getenv_priority, 0, 0, 0, 0, 0, 0);
+}
